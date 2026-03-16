@@ -449,7 +449,7 @@ ssh -i /Users/mac/Downloads/resume-matcher-docker.pem \
 
 You can have every **push to the `main` branch** automatically deploy the latest code to your EC2 instance (sync files, rebuild Docker, restart the container). No need to run `scp` or SSH manually.
 
-#### One-time setup
+#### One-time setup - CI/CD
 
 1. **Add GitHub secrets** (repo → **Settings → Secrets and variables → Actions** → **New repository secret**):
    - **`SSH_PRIVATE_KEY`**: Paste the **entire contents** of your `.pem` file (the same one you use for `ssh -i resume-matcher-docker.pem`). Copy from the first line (e.g. `-----BEGIN RSA PRIVATE KEY-----`) to the last line (e.g. `-----END RSA PRIVATE KEY-----`).
