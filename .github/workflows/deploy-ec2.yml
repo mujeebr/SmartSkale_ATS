@@ -1,0 +1,48 @@
+# Deploy to EC2 on every push to main.
+# Requires GitHub secrets: SSH_PRIVATE_KEY, EC2_HOST, OPENAI_API_KEY (see README).
+
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Allow manual run from Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key.pem
+          chmod 600 ~/.ssh/deploy_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Sync code (exclude .git, .env, and local venv/assignment folder)
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='assignment/' \
+            --exclude='.github' \
+            . ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/assignment/
+
+          # Rebuild and restart Docker container on EC2
+          ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} \
+            "cd /home/ubuntu/assignment && \
+             docker stop resume-matcher-api 2>/dev/null || true && \
+             docker rm resume-matcher-api 2>/dev/null || true && \
+             docker build -t resume-matcher-api . && \
+             docker run -d --name resume-matcher-api -p 8000:8000 \
+               -e OPENAI_API_KEY='$OPENAI_API_KEY' resume-matcher-api"
+
+      - name: Deployment summary
+        run: |
+          echo "Deployed to EC2. API: http://${{ secrets.EC2_HOST }}:8000/docs"

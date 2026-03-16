@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+env/
+.python-version
+assignment/
+# Used only for removing secrets from git history - never commit
+expressions.txt
+secrets-to-replace.txt
